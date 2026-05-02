@@ -51,6 +51,56 @@ body::before{
   to{transform:translateY(110vh) rotate(720deg)}
 }
 
+/* Eksplosjons-partikler */
+.burst{
+  position:fixed;
+  top:50%;
+  left:50%;
+  width:12px;
+  height:18px;
+  pointer-events:none;
+  z-index:5;
+  border-radius:2px;
+  --tx:0px;
+  --ty:0px;
+  --rot:0deg;
+  animation:burst 1.6s cubic-bezier(.15,.7,.3,1) forwards;
+}
+@keyframes burst{
+  0%{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(0) rotate(0deg);
+  }
+  15%{
+    opacity:1;
+    transform:translate(calc(-50% + var(--tx)*.4),calc(-50% + var(--ty)*.4)) scale(1.2) rotate(calc(var(--rot)*.4));
+  }
+  100%{
+    opacity:0;
+    transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty) + 40vh)) scale(.8) rotate(var(--rot));
+  }
+}
+
+/* Lysblink i midten ved eksplosjon */
+.flash{
+  position:fixed;
+  top:50%;
+  left:50%;
+  width:50px;
+  height:50px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,248,231,.95) 0%,rgba(232,213,160,.5) 40%,transparent 70%);
+  transform:translate(-50%,-50%) scale(0);
+  pointer-events:none;
+  z-index:4;
+  animation:flash 1s ease-out forwards;
+}
+@keyframes flash{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(0)}
+  20%{opacity:1;transform:translate(-50%,-50%) scale(8)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(15)}
+}
+
 .card{
   position:relative;
   z-index:2;
@@ -161,8 +211,8 @@ body::before{
   text-shadow:0 0 60px rgba(232,213,160,.4);
   margin-bottom:.4rem;
   opacity:0;
-  transform:scale(.4);
-  animation:zoomIn 1.2s 2.2s forwards;
+  transform:scale(.2);
+  animation:slamIn 1.2s 2.2s cubic-bezier(.2,1.5,.4,1) forwards;
 }
 .amount .kr{
   font-size:.3em;
@@ -172,8 +222,12 @@ body::before{
   letter-spacing:.05em;
   vertical-align:super;
 }
-@keyframes zoomIn{
-  to{opacity:1;transform:scale(1)}
+@keyframes slamIn{
+  0%{opacity:0;transform:scale(.2) rotate(-15deg);text-shadow:0 0 0 rgba(232,213,160,0)}
+  60%{opacity:1;transform:scale(1.25) rotate(3deg);text-shadow:0 0 100px rgba(255,248,231,.8)}
+  75%{transform:scale(.92) rotate(-2deg)}
+  88%{transform:scale(1.05) rotate(1deg)}
+  100%{opacity:1;transform:scale(1) rotate(0deg);text-shadow:0 0 60px rgba(232,213,160,.4)}
 }
 
 .from-label{
@@ -253,18 +307,59 @@ body::before{
 </div>
 
 <script>
-const colors = ['#b8954a','#d4b56a','#e8d5a0','#f5e6c8','#fff8e7'];
-for (let i = 0; i < 50; i++){
-  const c = document.createElement('div');
-  c.className = 'confetti';
-  c.style.left = Math.random() * 100 + '%';
-  c.style.background = colors[i % colors.length];
-  c.style.animationDuration = (3 + Math.random() * 3) + 's';
-  c.style.animationDelay = (Math.random() * 4) + 's';
-  c.style.opacity = .6 + Math.random() * .4;
-  c.style.transform = 'rotate(' + (Math.random()*360) + 'deg)';
-  document.body.appendChild(c);
+const colors = ['#b8954a','#d4b56a','#e8d5a0','#f5e6c8','#fff8e7','#ffd700'];
+
+// Bakgrunns-konfetti som faller (starter etter eksplosjonen)
+function startFallingConfetti(){
+  for (let i = 0; i < 50; i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + '%';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDuration = (3 + Math.random() * 3) + 's';
+    c.style.animationDelay = (Math.random() * 4) + 's';
+    c.style.opacity = .6 + Math.random() * .4;
+    c.style.transform = 'rotate(' + (Math.random()*360) + 'deg)';
+    document.body.appendChild(c);
+  }
 }
+
+// Eksplosjon — konfetti spruter ut fra midten
+function explode(particleCount){
+  // Lysblink
+  const flash = document.createElement('div');
+  flash.className = 'flash';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 1100);
+
+  // Partikler
+  for (let i = 0; i < particleCount; i++){
+    const p = document.createElement('div');
+    p.className = 'burst';
+    const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - .5) * .3;
+    const distance = 250 + Math.random() * 350;
+    const tx = Math.cos(angle) * distance;
+    const ty = Math.sin(angle) * distance;
+    p.style.setProperty('--tx', tx + 'px');
+    p.style.setProperty('--ty', ty + 'px');
+    p.style.setProperty('--rot', (Math.random() * 1080 - 540) + 'deg');
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.width = (8 + Math.random() * 8) + 'px';
+    p.style.height = (12 + Math.random() * 10) + 'px';
+    p.style.animationDelay = (Math.random() * .15) + 's';
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 2000);
+  }
+}
+
+// Første eksplosjon ved sideåpning
+window.addEventListener('load', () => {
+  setTimeout(() => explode(80), 100);
+  // Stor eksplosjon når beløpet slammes inn
+  setTimeout(() => explode(120), 2200);
+  // Bakgrunns-konfetti starter
+  setTimeout(startFallingConfetti, 800);
+});
 </script>
 
 </body>
